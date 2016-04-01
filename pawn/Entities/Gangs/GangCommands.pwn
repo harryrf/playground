@@ -246,9 +246,10 @@ class GangCommands {
             }
         }
 
-        // Checks if the user is ALREADY in any gang.
-        if (GangPlayer(playerId)->gangId() == Gang::InvalidId) {
-            Gang(gangId)->onPlayerLeave(playerId);
+        // Checks if the user is already in any gang. If they are, remove them from
+        // first gang and allow them to join new gang.
+        if (GangPlayer(playerId)->gangId() != Gang::InvalidId) {
+            Gang(GangPlayer(playerId)->gangId())->onPlayerLeave(playerId);
         }
 
         // Join the gang. The Gang::onPlayerJoin() message will announce it to the gang and set up

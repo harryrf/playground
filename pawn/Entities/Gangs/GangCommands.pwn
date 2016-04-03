@@ -211,6 +211,7 @@ class GangCommands {
     @switch(GangCommand, "join")
     public onGangJoinCommand(playerId, params[]) {
         new gangId = Gang::InvalidId;
+        new playerGangId = GangPlayer(playerId)->gangId();
 
         // If a parameter has been given, it might be an administrator forcefully joining a gang.
         if (Command->parameterCount(params) != 0) {
@@ -248,8 +249,8 @@ class GangCommands {
 
         // Checks if the user is already in any gang. If they are, remove them from
         // first gang and allow them to join new gang.
-        if (GangPlayer(playerId)->gangId() != Gang::InvalidId) {
-            Gang(GangPlayer(playerId)->gangId())->onPlayerLeave(playerId);
+        if (playerGangId != Gang::InvalidId) {
+            Gang(playerGangId)->onPlayerLeave(playerId);
         }
 
         // Join the gang. The Gang::onPlayerJoin() message will announce it to the gang and set up

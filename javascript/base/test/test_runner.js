@@ -120,6 +120,7 @@ class TestRunner {
     // TODO(Russell): Actually use |pattern|. This requires file globbing functionality within the
     // plugin, which doesn't exist yet.
     {
+      require('base/color.test.js');
       require('base/extendable.test.js');
       require('base/message.test.js');
       require('base/priority_queue.test.js');
@@ -129,21 +130,20 @@ class TestRunner {
       require('base/vector.test.js');
       require('components/command_manager/command_builder.test.js');
       require('components/database/database.test.js');
+      require('components/dialogs/question.test.js');
+      require('components/dialogs/question_sequence.test.js');
       require('components/feature_manager/dependency_graph.test.js');
       require('components/feature_manager/feature_manager.test.js');
       require('components/text_draw/text_draw.test.js');
+      require('entities/player_manager.test.js');
       require('entities/scoped_entities.test.js');
+      require('features/announce/announce_manager.test.js');
       require('features/death_feed/death_feed_feature.test.js');
+      require('features/gang_chat/gang_chat_manager.test.js');
       require('features/gangs/gang_commands.test.js');
+      require('features/gangs/gang_manager.test.js');
       require('features/races/drift_tracker.test.js');
       require('features/races/race_importer.test.js');
-      require('world/economy/land_value/residential_value_plane.test.js');
-      require('world/economy/land_value_plane.test.js');
-      require('world/geometry/bounding_box_util.test.js');
-      require('world/geometry/geo_circle.test.js');
-      require('world/geometry/geo_plane.test.js');
-      require('world/geometry/geo_point.test.js');
-      require('world/geometry/geo_rectangle.test.js');
     }
 
     // Remove the `describe` method from the global scope again.

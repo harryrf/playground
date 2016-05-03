@@ -11,7 +11,7 @@ function PlayerParser(argumentString) {
   if (result === null)
     return [argumentString, null];
 
-  let player = Player.find(result[0]);
+  let player = server.playerManager.find({ nameOrId: result[0], returnPlayer: true });
   if (player === null)
     return [argumentString, null];
 
@@ -219,9 +219,11 @@ class CommandBuilder {
             if (result === null)
               break;
 
-            let subject = Player.find(result[0]);
-            if (subject === null)
-              break;
+            let subject = server.playerManager.find({ nameOrId: result[0], returnPlayer: true });
+            if (subject === null) {
+              player.sendMessage(Message.COMMAND_ERROR_UNKNOWN_PLAYER, argumentString);
+              return true;
+            }
 
             return listener(player, argumentString.substr(result[0].length), [ ...carriedArguments, subject ]);
         }

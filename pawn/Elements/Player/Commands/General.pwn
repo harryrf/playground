@@ -198,14 +198,14 @@ lvp_Teles(playerid, params[])
     return 1;
 }
 
-// Spawn an elegy. Only if players have sprayed all 100 tags.
+// Spawn an Elegy. Only if players have sprayed all 100 tags.
 // This is handled in Elements/Player/SprayTags.pwn
 lvp_Ele(playerid, params[])
 {
     return sprayTagOnVehicleCommand(playerid, params, SPRAY_TAG_ELEGY);
 }
 
-// Spawn an infernus. Only if players have sprayed all 100 tags.
+// Spawn an Infernus. Only if players have sprayed all 100 tags.
 // This is handled in Elements/Player/SprayTags.pwn
 lvp_Inf(playerid, params[])
 {
@@ -217,6 +217,13 @@ lvp_Inf(playerid, params[])
 lvp_Nrg(playerid, params[])
 {
     return sprayTagOnVehicleCommand(playerid, params, SPRAY_TAG_NRG);
+}
+
+// Spawn a Sultan. Only if players have sprayed all 100 tags.
+// This is handled in Elements/Player/SprayTags.pwn
+lvp_Sul(playerid, params[])
+{
+    return sprayTagOnVehicleCommand(playerid, params, SPRAY_TAG_SULTAN);
 }
 
 // /cmds
@@ -299,9 +306,9 @@ lvp_stats(playerid, params[])
     SendClientMessage(playerid, COLOR_GREEN, szStatMsg);
 
 #if Feature::DisableRaces == 0
-    format(szStatMsg, 128, "Races: %d Achievements: %d NPCs: %d", g_RacesLoaded, TotalAchievements, iNPCSOnline);
+    format(szStatMsg, 128, "Races: %d Achievements: %d NPCs: %d", g_RacesLoaded, TotalAchievements-UnavailableTotalAchievements, iNPCSOnline);
 #else
-    format(szStatMsg, 128, "Achievements: %d NPCs: %d", TotalAchievements, iNPCSOnline);
+    format(szStatMsg, 128, "Achievements: %d NPCs: %d", TotalAchievements-UnavailableTotalAchievements, iNPCSOnline);
 #endif
     SendClientMessage(playerid, COLOR_GREEN, szStatMsg);
 
@@ -314,95 +321,104 @@ lvp_stats(playerid, params[])
     return 1;
 }
 
-// Command: /slap
-// Level: Player
-// Params: playerid/name
-// Desc: Slap a player
-// Author: Jay
-lvp_slap(playerid, params[])
-{
-    if(Time->currentTime() - canSlap[playerid] < 10 && Player(playerid)->isAdministrator() == false)
-    {
-        SendClientMessage(playerid, COLOR_RED, "* You can only slap every 10 seconds.");
-        return 1;
-    }
+// -------------------------------------------------------------------------------------------------
 
-    if(!params[0])
-    {
-        SendClientMessage(playerid, COLOR_WHITE, "Usage: /slap [player]");
+// Reasons one can be slapped with. Will be chosen by random.
+new SLAP_REASONS[][] = {
+    "cock", "sheep", "trout", "dildo", "probe", "rocket launcher", "hand", "network technician",
+    "boob", "poop", "FiXeR", "baseball bat", "computer", "fucker", "fist", "tree", "stick", "spike",
+    "broken bottle", "claw", "asswipe", "used dildo", "used condom", "broken laptop", "dog",
+    "motherfucking snake", "Luce", "trout"
+};
+
+// Makes |playerId| slap the |targetPlayerId|. Their most recent slap time and the target's most
+// recent slapped-by records will be updated.
+SlapCommand(playerId, targetPlayerId) {
+    for (new i = 0; i <= PlayerManager->highestPlayerId(); i++)
+        PlayerPlaySound(i, 1190 ,0, 0, 0);
+
+    new reason = random(sizeof(SLAP_REASONS));
+    new message[128];
+
+    format(message, sizeof(message), "* %s slaps %s around a bit with a large %s.",
+        Player(playerId)->nicknameString(), Player(targetPlayerId)->nicknameString(), SLAP_REASONS[reason]);
+    SendClientMessageToAllEx(Color::SlapAnnouncement, message);
+
+    GameTextForPlayer(targetPlayerId, "~y~slapped", 5000, 5);
+
+    g_LastSlapTime[playerId] = Time->currentTime();
+    g_LastSlappedBy[targetPlayerId] = playerId;
+}
+
+// Command: /slap [player]
+// Author: Jay, Russell
+lvp_slap(playerId, params[]) {
+    if(!params[0]) {
+        SendClientMessage(playerId, Color::Information, "Usage: /slap [player]");
         return 1;
     }
 
     param_shift(szParameter);
 
-    new iPlayerID = SelectPlayer(szParameter);
-
-    if(!Player(iPlayerID)->isConnected() || iPlayerID == playerid || IsPlayerNPC(iPlayerID))
-    {
-        SendClientMessage(playerid, COLOR_RED, "* Invalid player.");
+    new targetPlayerId = SelectPlayer(szParameter);
+    if (!Player(targetPlayerId)->isConnected() || IsPlayerNPC(targetPlayerId)) {
+        SendClientMessage(playerId, Color::Warning, "Error: That player is not connected to the server!");
         return 1;
     }
 
-
-    if(GetPlayerMoney(playerid) < 5)
-    {
-        SendClientMessage(playerid, COLOR_RED, "* It costs $5 to slap a player!");
+    if (targetPlayerId == playerId) {
+        SendClientMessage(playerId, Color::Warning, "Error: You cannot slap yourself, silly!");
         return 1;
     }
 
-    GivePlayerMoney(playerid, -5);
-
-    for (new i = 0; i <= PlayerManager->highestPlayerId(); i++)
-    PlayerPlaySound(i, 1190 ,0, 0, 0);
-
-    new szSlapMsg[256];
-
-    new rand = random(29);
-
-    switch(rand)
-    {
-    case 0: szSlapMsg = "cock";
-    case 1: szSlapMsg = "sheep";
-    case 2: szSlapMsg = "trout";
-    case 3: szSlapMsg = "dildo";
-    case 4: szSlapMsg = "probe";
-    case 5: szSlapMsg = "rocket launcher";
-    case 6: szSlapMsg = "hand";
-    case 7: szSlapMsg = "network technician";
-    case 8: szSlapMsg = "boob";
-    case 9: szSlapMsg = "poop";
-    case 10: szSlapMsg = "FiXeR";
-    case 11: szSlapMsg = "baseball bat";
-    case 12: szSlapMsg = "computer";
-    case 13: szSlapMsg = "fucker";
-    case 14: szSlapMsg = "fist";
-    case 15: szSlapMsg = "tree";
-    case 16: szSlapMsg = "stick";
-    case 17: szSlapMsg = "spike";
-    case 18: szSlapMsg = "broken bottle";
-    case 19: szSlapMsg = "claw";
-    case 20: szSlapMsg = "asswipe";
-    case 21: szSlapMsg = "used dildo";
-    case 22: szSlapMsg = "used condom";
-    case 23: szSlapMsg = "broken laptop";
-    case 24: szSlapMsg = "dog";
-    case 25: szSlapMsg = "motherfucking twat";
-    case 26: szSlapMsg = "penis";
-    case 27: szSlapMsg = "woman";
-    case 28: szSlapMsg = "Luce";
-    default: szSlapMsg = "trout";
-
+    new timeSinceLastSlap = Time->currentTime() - g_LastSlapTime[playerId];
+    if (timeSinceLastSlap < 10 /* seconds */ && Account(playerId)->userId() != 31797 /* Luce */) {
+        SendClientMessage(playerId, Color::Warning, "Error: You can only slap once per 10 seconds.");
+        return 1;
     }
 
-    format(szSlapMsg, sizeof(szSlapMsg), "* %s {A9C4E4}slaps{CCCCCC} %s around a bit with a large {A9C4E4}%s{CCCCCC}.",
-        PlayerName(playerid), PlayerName(iPlayerID), szSlapMsg);
-    SendClientMessageToAllEx(Color::ConnectionMessage, szSlapMsg);
+    if (GetPlayerMoney(playerId) < 5000 /* dollars */) {
+        SendClientMessage(playerId, Color::Warning, "Error: Slapping another player costs $5,000.");
+        return 1;
+    }
 
-    canSlap[playerid] = Time->currentTime();
+    GivePlayerMoney(playerId, -5000);
 
-    GameTextForPlayer(iPlayerID, "~y~slapped", 5000, 5);
+    SlapCommand(playerId, targetPlayerId);
     return 1;
 }
+
+// Command: /slapb, /slapback
+// Author: Russell
+lvp_slapb(playerId, params[]) {
+    if (g_LastSlappedBy[playerId] == INVALID_PLAYER_ID) {
+        SendClientMessage(playerId, Color::Warning, "Error: Sorry, I forgot who slapped you last!");
+        return 1;
+    }
+
+    new timeSinceLastSlap = Time->currentTime() - g_LastSlapTime[playerId];
+    if (timeSinceLastSlap < 10 /* seconds */) {
+        SendClientMessage(playerId, Color::Warning, "Error: You can only slap once per 10 seconds.");
+        return 1;
+    }
+
+    if (GetPlayerMoney(playerId) < 5000 /* dollars */) {
+        SendClientMessage(playerId, Color::Warning, "Error: Slapping another player costs $5,000.");
+        return 1;
+    }
+
+    GivePlayerMoney(playerId, -5000);
+
+    SlapCommand(playerId, g_LastSlappedBy[playerId]);
+    return 1;
+
+    #pragma unused params
+}
+
+// Because our command aliasing system is so amazing.
+lvp_slapback(playerId, params[]) { return lvp_slapb(playerId, params); }
+
+// -------------------------------------------------------------------------------------------------
 
 // Command: /lyse
 // Level: Player
@@ -842,6 +858,8 @@ lvp_pos(playerid, params[])
 // Notes: A command for the owner of the frisia, it sets the interest rate.
 lvp_interest(playerid,params[])
 {
+    new iInterestTime[MAX_PLAYERS];
+
     new propertyId = PropertyManager->propertyForSpecialFeature(LoansFeature),
         endid = propertyId == Property::InvalidId ? Player::InvalidId : Property(propertyId)->ownerId();
 

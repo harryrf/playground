@@ -248,7 +248,8 @@ ResetPlayerStats(playerId) {
     canMoney[playerId] = 0;
     UserTemped[playerId] = "";
     PlayerHandOfGod[playerId] = 0;
-    canSlap[playerId] = 0;
+    g_LastSlapTime[playerId] = 0;
+    g_LastSlappedBy[playerId] = INVALID_PLAYER_ID;
     WantedLevel[playerId] = 0;
     ResetPlayerRampingData(playerId);
     PlayerInfo[playerId][reactionTestWins] = 0;
@@ -467,38 +468,25 @@ strtok(const string[], &index) {
     return result;
 }
 
-GetDistanceBetweenPlayers(p1, p2) {
+Float:GetDistanceBetweenPlayers(p1, p2) {
     new Float: x1,Float: y1,Float: z1,Float: x2,Float: y2,Float: z2;
-    if (Player(p1)->isConnected() == false || Player(p2)->isConnected() == false)
-        xDistance = -1.00;
+    if (Player(p1)->isConnected() == false || Player(p2)->isConnected() == false) {
+        return -1.00;
+    }
 
     GetPlayerPos(p1, x1, y1, z1);
     GetPlayerPos(p2, x2, y2, z2);
-    xDistance = floatsqroot(floatpower(floatabs(floatsub(x2, x1)), 2) + floatpower(floatabs(floatsub(y2, y1)), 2) + floatpower(floatabs(floatsub(z2, z1)), 2));
-
-    return 1;
+    return floatsqroot(floatpower(floatabs(floatsub(x2, x1)), 2) + floatpower(floatabs(floatsub(y2, y1)), 2) + floatpower(floatabs(floatsub(z2, z1)), 2));
 }
 
-GetDistance(playerId, Float: num[3]) {
-    new Float: x1,Float: y1,Float: z1,Float: x2,Float: y2,Float: z2;
-    GetPlayerPos(playerId, x1, y1, z1);
-    x2 = num[0];
-    y2 = num[1];
-    z2 = num[2];
-
-    xDistance = floatsqroot(floatpower(floatsqroot(floatpower(floatsub(x2, x1), 2) + floatpower(floatsub(y2, y1), 2)), 2) + floatpower(floatsub(z2, z1), 2));
-    return 1;
-}
-
-GetDistanceEx(playerId, Float: x, Float: y, Float: z) {
+Float:GetDistance(playerId, Float: x, Float: y, Float: z) {
     new Float: x1, Float: y1, Float: z1, Float: x2, Float: y2, Float: z2;
     GetPlayerPos(playerId, x1, y1, z1);
     x2 = x;
     y2 = y;
     z2 = z;
 
-    new Float: n_Distance = floatsqroot(floatpower(floatsqroot(floatpower(floatsub(x2, x1), 2) + floatpower(floatsub(y2, y1), 2)), 2) + floatpower(floatsub(z2, z1), 2));
-    return floatround(n_Distance);
+    return floatsqroot(floatpower(floatsqroot(floatpower(floatsub(x2, x1), 2) + floatpower(floatsub(y2, y1), 2)), 2) + floatpower(floatsub(z2, z1), 2));
 }
 
 right(source[], len) {
@@ -590,12 +578,12 @@ adler32(buf[]) {
 }
 
 GetPlayerId(name[]) {
-    new lenght = strlen(name);
-    if (lenght < 3)
+    new length = strlen(name);
+    if (length < 3)
         return Player::InvalidId;
 
     for (new playerId = 0; playerId <= PlayerManager->highestPlayerId(); ++playerId) {
-        if (Player(playerId)->isConnected() == true && (strcmp(name, Player(playerId)->nicknameString(), true, lenght) == 0))
+        if (Player(playerId)->isConnected() == true && (strcmp(name, Player(playerId)->nicknameString(), true, length) == 0))
             return playerId;
     }
 
@@ -1029,4 +1017,15 @@ ordinal( str[], iLen, iNumber )
 
     format( str, iLen, "%d%s", iNumber, szSuffix );
     return 1;
+}
+
+GetPlayerIngameHours(playerId) {
+    return gameplayhours[playerId];
+}
+
+GetPlayerIngameTime(playerId) {
+    if (playerId < 0 || playerId >= MAX_PLAYERS)
+        return 0;
+
+    return 3600 * gameplayhours[playerId] + 60 * gameplayminutes[playerId] + gameplayseconds[playerId];
 }

@@ -19,20 +19,22 @@ CheckPlayerArea(playerId) {
     CheckpointProcess(playerId);
     AirportGateCheck(playerId);
 
-    if (PlayerInfo[playerId][PlayerStatus] != STATUS_KNOCKOUT ||
-        !IsPlayerInMinigame(playerId) ||
-        !isPlayerInArea(playerId, inKnockout)) {
-        return;
+    if (PlayerInfo[playerId][PlayerStatus] == STATUS_KNOCKOUT && IsPlayerInMinigame (playerId)) {
+        new Float:knockoutAreaXmin = 763.2200
+           ,Float:knockoutAreaYmin = -72.2000;
+                     //Knockout-area: Xmin              Xmax      Ymin              Ymax
+        if (IsPlayerInArea (playerId, knockoutAreaXmin, 770.1500, knockoutAreaYmin, -65.1600))
+            return;
+
+        new Float: Xko = knockoutAreaXmin + 0.5000 + float (random (4));
+        new Float: Yko = knockoutAreaYmin + 0.5000 + float (random (4));
+
+        SetPlayerInterior (playerId, 7);
+        SetPlayerPos (playerId, Xko, Yko, 1001);
+
+        SendClientMessage (playerId, COLOR_RED, "Stay in the Boxring!");
+        GameTextForPlayer (playerId, "~r~Stay in the Boxring!", 3000, 5);
     }
-
-    new Float: Xko = 764.64 + float(random(5));
-    new Float: Yko = -70.91 + float(random(6));
-
-    SetPlayerInterior(playerId, 7) ;
-    SetPlayerPos(playerId, Xko, Yko, 1001) ;
-
-    SendClientMessage(playerId, COLOR_RED, "Stay in the Boxring!");
-    GameTextForPlayer(playerId, "~r~Stay in the Boxring!", 3000, 5);
 }
 
 // Function: CheckpointProcess
@@ -98,24 +100,23 @@ CheckpointProcess(i)
 // Author: Jay.
 AirportGateCheck(i)
 {
-    new
-        Float:x,
-        Float:y,
-        Float:z;
+    new Float:x
+       ,Float:y
+       ,Float:z
+       ,bool:isPlayerInTaxPoint[MAX_PLAYERS];
 
     GetPlayerPos(i,x,y,z);
 
-    if(isPlayerInAreaEx(i,1695.2847,1716.2305,1594.6019,1622.7753) && z < 16)
+    if(IsPlayerInArea (i, 1695.2847, 1716.2305, 1594.6019, 1622.7753) && z < 16)
     {
-        new szMessage[256];
-
-        new propertyId = PropertyManager->propertyForSpecialFeature(CustomTaxAirportFeature),
-            endid = propertyId == Property::InvalidId ? Player::InvalidId : Property(propertyId)->ownerId();
+        new szMessage[256]
+           ,propertyId = PropertyManager->propertyForSpecialFeature(CustomTaxAirportFeature)
+           ,endid = propertyId == Property::InvalidId ? Player::InvalidId : Property(propertyId)->ownerId();
 
         // if the player is near the tax pay-point, and hasn't already payed,
-        if(!PlayerInPointTax[i])
+        if(!isPlayerInTaxPoint[i])
         {
-            PlayerInPointTax[ i ] = true;
+            isPlayerInTaxPoint[ i ] = true;
             if(GetPlayerMoney(i) < douane && endid != i && !isGateOpen && !IsPlayerInMinigame(i) && GetPlayerState(i) == PLAYER_STATE_DRIVER)
             {
                 format(szMessage,sizeof(szMessage),"You need $%d to pay customs tax to enter/exit the airport.",douane);
@@ -161,9 +162,9 @@ AirportGateCheck(i)
         }
     }
 
-    if(!isPlayerInAreaEx( i, 1695.2847, 1716.2305, 1594.6019, 1622.7753 ))
+    if(!IsPlayerInArea (i, 1695.2847, 1716.2305, 1594.6019, 1622.7753))
     {
-        PlayerInPointTax[i] = false;
+        isPlayerInTaxPoint[i] = false;
         if(isGateOpen)
         {
             CloseAirportGate();
@@ -172,21 +173,6 @@ AirportGateCheck(i)
 }
 
 // ------------------------------------------------------------------------------
-
-// Functions to declare whether a player is in an area:
-
-isPlayerInArea(cplayerID, Float:data[4])
-{
-    new Float:X, Float:Y, Float:Z;
-
-    GetPlayerPos(cplayerID, X, Y, Z);
-
-    if(X >= data[0] && X <= data[2] && Y >= data[1] && Y <= data[3]) {
-
-        return 1;
-    }
-    return 0;
-}
 
 // Airport gate functions:
 stock OpenAirportGate()

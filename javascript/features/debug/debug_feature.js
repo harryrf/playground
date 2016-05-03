@@ -17,15 +17,21 @@ class DebugFeature extends Feature {
     super(playground);
 
     // /serverfps
-    playground.commandManager.buildCommand('serverfps')
+    server.commandManager.buildCommand('serverfps')
         .restrict(Player.LEVEL_ADMINISTRATOR)
         .build(this.__proto__.serverFrameCounter.bind(this));
 
     // /trace [seconds]
-    playground.commandManager.buildCommand('trace')
+    server.commandManager.buildCommand('trace')
         .restrict(Player.LEVEL_MANAGEMENT)
         .parameters([{ name: 'seconds', type: CommandBuilder.NUMBER_PARAMETER }])
         .build(this.__proto__.captureTrace.bind(this));
+
+    // /sound [id]
+    server.commandManager.buildCommand('sound')
+        .restrict(Player.LEVEL_MANAGEMENT)
+        .parameters([{ name: 'sound', type: CommandBuilder.NUMBER_PARAMETER }])
+        .build(this.__proto__.playSound.bind(this));
   }
 
   // Displays the number of FPS the server was able to handle since the last call to this command.
@@ -55,11 +61,16 @@ class DebugFeature extends Feature {
     wait(seconds * 1000).then(() => {
       global.stopTrace(filename);
 
-      if (player.connected)
+      if (player.isConnected())
         player.sendMessage(Message.DEBUG_TRACE_FINISHED);
     });
 
     player.sendMessage(Message.DEBUG_TRACE_STARTED);
+  }
+
+  // Plays |soundId| for all in-game players.
+  playSound(player, soundId) {
+    server.playerManager.forEach(p => p.playSound(soundId));
   }
 }
 

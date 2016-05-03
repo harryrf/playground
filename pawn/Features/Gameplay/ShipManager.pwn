@@ -304,7 +304,8 @@ class ShipManager {
                 return 1;
             }
 
-            this->issueMoneyToPlayer(playerId);
+            if (!PlayerIdlePenalty->isIdle(playerId))
+                this->issueMoneyToPlayer(playerId);
 
             if (Player(playerId)->isAdministrator() == false) {
                 if (!LegacyIsKillTimeActivated()) {
@@ -366,7 +367,7 @@ class ShipManager {
         if (Command->parameterCount(params) >= 1) {
             Command->stringParameter(params, 0, setShiprailToState, sizeof(setShiprailToState));
 
-            if (strcmp(setShiprailToState, "on", false) == 0 && m_isTheShiprailEnabled == false) {
+            if (strcmp(setShiprailToState, "on", true) == 0 && m_isTheShiprailEnabled == false) {
                 this->enableShiprail(true);
 
                 SendClientMessage(playerId, Color::Success, "Shiprail enabled.");
@@ -375,7 +376,7 @@ class ShipManager {
                 Admin(playerId, adminMessage);
 
                 return 1;
-            } else if (strcmp(setShiprailToState, "off", false) == 0 && m_isTheShiprailEnabled == true) {
+            } else if (strcmp(setShiprailToState, "off", true) == 0 && m_isTheShiprailEnabled == true) {
                 this->enableShiprail(false);
 
                 SendClientMessage(playerId, Color::Success, "Shiprail disabled.");

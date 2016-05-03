@@ -12,14 +12,12 @@
 new sKillTime;
 new killTimeWeaponId = 0;
 new iServerChampion = Player::InvalidId;
-new iServerKillRecord = 10;
 new iRecordName[MAX_PLAYER_NAME+1] = "LVP";
 new playerLastQuitInterior[MAX_PLAYERS];
 new iRconLoginAttempts[MAX_PLAYERS];
 new iPlayerSawnoffWeapon[MAX_PLAYERS];
 new iWeaponCheatCount[MAX_PLAYERS];
 new iPlayerAnimation[MAX_PLAYERS];
-new iTaxiActive[MAX_PLAYERS];
 new iPlayerSesDeaths[MAX_PLAYERS];
 new iPlayerSesKills[MAX_PLAYERS];
 new iPlayerDied[MAX_PLAYERS];
@@ -35,9 +33,7 @@ new PlayerJoins[MAX_PLAYERS][6];
 new g_PlayerCpVisible[MAX_PLAYERS];
 new Vip;
 new VipExit;
-new iPlayerVIPEntry[MAX_PLAYERS];
 new iPlayerInVipRoom[MAX_PLAYERS];
-new iInterestTime[MAX_PLAYERS];
 new sPlayerWeapons[MAX_PLAYERS][14][2];
 new g_iSpawnMoney[MAX_PLAYERS];
 new bool: RampingEnabled = true;
@@ -53,17 +49,13 @@ new g_TrainPickup_4;
 new bool: showMessagesEnabled[MAX_PLAYERS];
 new Text: TaxiArrival[MAX_PLAYERS] = {Text:INVALID_TEXT_DRAW, ...};
 new playerTaxi[MAX_PLAYERS][6];
-new Float: g_TaxiPOS[MAX_PLAYERS][3];
 new bool: g_isAiming[MAX_PLAYERS];
 new isGateOpen;
 new g_AllowWeapons[MAX_INTERIORS][MAX_PLAYERS];
 new g_FlagTime[MAX_PLAYERS][5];
-new PlayerInPointTax[MAX_PLAYERS];
-new Menu: Taxi;
 new Drivebyer[MAX_PLAYERS];
 new HeliKill[MAX_PLAYERS];
 new preventKillLamers[MAX_PLAYERS];
-new Float:xDistance;
 new playerVehExp[MAX_PLAYERS];
 new g_PlayerMenu[ MAX_PLAYERS ];
 new lastShowmsg;
@@ -72,13 +64,12 @@ new mayTax[MAX_PLAYERS];
 new g_bPlayerGodmode[ MAX_PLAYERS ];
 new banWarning[MAX_PLAYERS];
 new tpWarning[MAX_PLAYERS];
-new canSlap[MAX_PLAYERS];
-new taxiPrijs = 200;
+new g_LastSlapTime[MAX_PLAYERS];
+new g_LastSlappedBy[MAX_PLAYERS];
 new bankRente = 4;
 new Float: SavedPos2[MAX_PLAYERS][5];
 new douane = 1500;
 new isCaged[MAX_PLAYERS];
-new casinoHunter;
 new UserTemped[MAX_PLAYERS][MAX_PLAYER_NAME+1];
 new g_AirportPickup[4];
 new Menu:AirportMenu[4];
@@ -98,7 +89,6 @@ new MyCarBombs[MAX_PLAYERS];
 new KTKills[MAX_PLAYERS];
 new KTDeaths[MAX_PLAYERS];
 new KTTimer;
-new KTTijd;
 new WantedLevel[MAX_PLAYERS];
 new gameplayseconds[MAX_PLAYERS];
 new gameplayminutes[MAX_PLAYERS];
@@ -139,10 +129,6 @@ new Float: TuningGarages[5][3] = {
     {-2707.4700, 218.6432, 3.7641}
 };
 
-new Float: inKnockout[4] = {
-    763.4322, -72.1279, 769.8801, -65.1865
-};
-
 new Float: airports[4][3] = {
     {1691.0018, 1451.0864, 10.7659}, // LV
     {-1406.2073, -305.1451, 14.1484}, // SF
@@ -167,34 +153,6 @@ new Float: gArmorPickups[4][PickupSpawnInfo] = {
     {1491.0803, 2773.4373, 15.9706},
     {2088.6541, 1450.2456, 10.8203}
 };
-
-GetPlayerIngameHours(playerId) {
-    return gameplayhours[playerId];
-}
-
-GetPlayerIngameTime(playerId) {
-    if (playerId < 0 || playerId >= MAX_PLAYERS)
-        return 0;
-
-    return 3600 * gameplayhours[playerId] + 60 * gameplayminutes[playerId] + gameplayseconds[playerId];
-}
-
-enum gPlayerStats {
-    ACdeaths,
-    ACkills
-};
-new iStatistics[MAX_PLAYERS][gPlayerStats];
-
-enum gGlobalStats {
-    ACreaction,
-    ACkills
-};
-
-enum gThingsToSave {
-    ACplayerid,
-    ACamount
-};
-new iGlobalStats[gGlobalStats][gThingsToSave];
 
 enum ePlayerInfo {
     iPlayerTeam,

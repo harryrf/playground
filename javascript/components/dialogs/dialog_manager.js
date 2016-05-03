@@ -2,8 +2,7 @@
 // Use of this source code is governed by the MIT license, a copy of which can
 // be found in the LICENSE file.
 
-let Player = require('entities/player.js'),
-    PlayerDisconnectError = require('base/errors/player_disconnect_error.js');
+let PlayerDisconnectError = require('base/errors/player_disconnect_error.js');
 
 // The dialog manager manages allocation of the dialog ids to individual dialogs that should be
 // shown to users. The SA-MP server imposes a maximum of 32767 dialogs to exist at any given time,
@@ -25,17 +24,16 @@ class DialogManager {
   // Displays a dialog for |player|. This method will return a promise that will resolve when the
   // player responds to the dialog, and reject when the player disconnects while it's showing.
   displayForPlayer(player, style, caption, contents, leftButton, rightButton) {
-    if (!(player instanceof Player))
-      throw new Error('Dialogs can only be shown to instances of the Player object.');
-
     let dialogId = this.allocateDialogId(),
         playerId = player.id;
 
     this.playerDialogs_[playerId] = dialogId;
 
     return new Promise((resolve, reject) => {
-      if (!pawnInvoke('ShowPlayerDialog', 'iiissss', playerId, dialogId, style, caption, contents, leftButton, rightButton))
+      if (!player.isConnected())
         throw new Error('Unable to show the dialog on the SA-MP server.');
+
+      player.showDialog(dialogId, style, caption, contents, leftButton, rightButton);
 
       this.dialogs_[dialogId] = { resolve: resolve, reject: reject };
     });
@@ -53,7 +51,7 @@ class DialogManager {
     this.dialogs_[dialogId].resolve({
       response: event.response,
       listitem: event.listitem,
-      inputtext: event.inputtext
+      inputtext: event.inputtext.trim()
     });
 
     delete this.playerDialogs_[event.playerid];

@@ -183,6 +183,9 @@ class ColorPicker {
         if (m_globalColorPickerTextDraw[1] == clickedId) {
             this->hideColorPicker(playerId);
 
+            if (m_colorPickerTarget[playerId] == JavaScriptColor)
+                CallRemoteFunction("OnColorPickerResponse", "ii", playerId, 0 /* invalid color */);
+
             return 1;
         }
 
@@ -194,8 +197,11 @@ class ColorPicker {
             this->hideColorPicker(playerId);
 
             // Take care of the actual color changing.
-            new color = this->colorForColorPickerCell(cellIndex), extraId = m_colorPickerExtraId[playerId],
-                message[128];
+            new color = this->colorForColorPickerCell(cellIndex);
+
+#if Feature::EnableGangSystem == 1
+            new message[128], extraId = m_colorPickerExtraId[playerId];
+#endif
 
             // Set the correct color when a crew member picks their special color.
             if (cellIndex == 0 && m_colorPickerTarget[playerId] != GangColor) {
@@ -204,6 +210,7 @@ class ColorPicker {
             }
 
             switch (m_colorPickerTarget[playerId]) {
+#if Feature::EnableGangSystem == 1
                 case GangColor: {
                     // TODO: Move this to Gang::OnColorChanged or something similar.
                     Gang(extraId)->setColor(color);
@@ -214,7 +221,7 @@ class ColorPicker {
 
                     SendClientMessage(playerId, Color::Success, "You have successfully changed the colour of your gang!");
                 }
-
+#endif
                 case PlayerColor: {
                     // TODO: Move all of this to Player::OnColorChanged.
                     if (Player(playerId)->isAdministrator() == false)
@@ -223,6 +230,10 @@ class ColorPicker {
                     ColorManager->setPlayerCustomColor(playerId, color);
 
                     SendClientMessage(playerId, Color::Success, "Your colour has been changed!");
+                }
+
+                case JavaScriptColor: {
+                    CallRemoteFunction("OnColorPickerResponse", "ii", playerId, color);
                 }
             }
 
@@ -233,3 +244,16 @@ class ColorPicker {
         return 0;
     }
 };
+
+forward OnColorPickerRequest(playerid);
+forward OnColorPickerResponse(playerid, color);
+
+public OnColorPickerRequest(playerid) {
+    if (!Player(playerid)->isConnected())
+        return;
+
+    ColorPicker->showColorPicker(playerid, JavaScriptColor);
+}
+
+public OnColorPickerResponse(playerid, color) {}
+

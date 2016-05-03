@@ -42,6 +42,8 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     if (Player(playerid)->isConnected() == false)
         return 1; // we haven't marked this player as being connected.
 
+    PlayerIdlePenalty->resetCurrentIdleTime(playerid);
+
     new cmd[256], idx;
     cmd = strtok(cmdtext, idx);
 
@@ -86,7 +88,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     new moneys;
 
     // commands for testing
-    if (!strcmp(cmdtext, "/pos")) {
+    if (!strcmp(cmdtext, "/pos", true)) {
         new message[64], Float: position[3], Float: rotation;
         GetPlayerPos(playerid, position[0], position[1], position[2]);
         GetPlayerFacingAngle(playerid, rotation);
@@ -98,7 +100,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     }
 
 #if BETA_TEST == 1
-        if(!strcmp(cmdtext, "/vehid"))
+        if(!strcmp(cmdtext, "/vehid", true))
         {
             new str[128];
             format(str, 128, "Vehicle ID: %d. Model: %d. Name: %s.",GetPlayerVehicleID(playerid), GetVehicleModel(GetPlayerVehicleID(playerid)), VehicleModel(GetVehicleModel(GetPlayerVehicleID(playerid)))->nameString());
@@ -145,7 +147,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     param_reset();
     new string[256];
 
-    if(!strcmp(cmdtext, "/radio"))
+    if(!strcmp(cmdtext, "/radio", true))
     {
         if(iRadioEnabledForPlayer[playerid] == true)
         {
@@ -232,11 +234,6 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     {
         ShowBoxForPlayer(playerid, "You're currently on the delivery mission! Get out of the truck to cancel the mission.");
         return 1;
-    }
-
-    if (GetPlayerMenu( playerid ) == Taxi) {
-        HideMenuForPlayer( Taxi, playerid );
-        g_PlayerMenu[ playerid ] = 0;
     }
 
     if(!strcmp(cmd, "/dm", true))
@@ -489,10 +486,10 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
         // Check whether one of the following commands has been given by the user,
         // in which case they're fine to proceed, otherwise show a message that
         // commands are disabled while the player is in a minigame.
-        if (strcmp(cmd, "/sync") != 0 &&
-            strcmp(cmd, "/find") != 0 &&
-            strcmp(cmd, "/fight") != 0 &&
-            strcmp(tmp, "cancel")) // cancel a minigame-request
+        if (strcmp(cmd, "/sync", true) != 0 &&
+            strcmp(cmd, "/find", true) != 0 &&
+            strcmp(cmd, "/fight", true) != 0 &&
+            strcmp(tmp, "cancel", true)) // cancel a minigame-request
         {
             ShowBoxForPlayer(playerid, "You are taking part in a minigame - Use /leave first");
             return 1;
@@ -528,6 +525,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     lvp_command(Ele,            3, PlayerLevel);
     lvp_command(Inf,            3, PlayerLevel);
     lvp_command(Nrg,            3, PlayerLevel);
+    lvp_command(Sul,            3, PlayerLevel);
 
     // General player commands:
     lvp_command(Commands,       8, PlayerLevel);
@@ -543,6 +541,8 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     lvp_command(taxi,           4, PlayerLevel);
     lvp_command(tow,            3, PlayerLevel);
     lvp_command(slap,           4, PlayerLevel);
+    lvp_command(slapb,          5, PlayerLevel);
+    lvp_command(slapback,       8, PlayerLevel);
     lvp_command(taxiprice,      9, PlayerLevel);
     lvp_command(countdown,      9, PlayerLevel);
     lvp_command(interest,       8, PlayerLevel);
@@ -970,7 +970,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
             new Target, tName[2][MAX_PLAYER_NAME+1], Float:tCoord[3], sNear[MAX_PLAYERS];
 
             if(GetPlayerMoney(playerid) < 15000) return ShowBoxForPlayer(playerid, "This animation costs $15000." );
-            if(Time->currentTime() - canSlap[playerid] < 10 && Player(playerid)->isAdministrator() == false)
+            if(Time->currentTime() - g_LastSlapTime[playerid] < 10 && Player(playerid)->isAdministrator() == false)
             {
                 ShowBoxForPlayer(playerid, "You can only slap every 10 seconds." );
                 return 1;
@@ -1002,7 +1002,9 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
             SendClientMessageToAllEx(0x0099FFAA, string);
             GivePlayerMoney(playerid, -15000);
 
-            canSlap[playerid] = Time->currentTime();
+            g_LastSlapTime[playerid] = Time->currentTime();
+            g_LastSlappedBy[Target] = playerid;
+
             return 1;
         }
 
@@ -1315,7 +1317,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
         return 1;
     }
 
-    if(strcmp(cmd, "/dev", false) == 0) {
+    if(strcmp(cmd, "/dev", true) == 0) {
         if (Player(playerid)->isDeveloper() == true || Player(playerid)->isAdministrator() == true) {
             if (strlen(cmdtext) <= 5) {
                 SendClientMessage(playerid, Color::Information, "This command sends a message to #LVP.Dev.");
@@ -1519,21 +1521,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
 
     if(strcmp(cmd, "/wanted", true) == 0)
     {
-        new iStr[128];
-        SendClientMessage(playerid, COLOR_LIGHTBLUE, "Current wanted people:");
-
-        for (new i = 0; i <= PlayerManager->highestPlayerId(); i++)
-        {
-            if(!Player(i)->isConnected()) continue;
-
-            if(GetWantedLevel(i,WantedLevel[i]) > 1)
-            {
-                format(iStr, sizeof(iStr), "%s (ID:%d) - %d stars", PlayerName(i),i,GetWantedLevel(i,WantedLevel[i]));
-                SendClientMessage(playerid, COLOR_WHITE, iStr);
-            }
-        }
-        format(iStr,128,"* Current Deathmatch Champion: %s with %d kills.",iRecordName,iServerKillRecord);
-        SendClientMessage(playerid,COLOR_WHITE,iStr);
+        WantedLevel__OnPlayerCommandText (playerid);
         return 1;
     }
 

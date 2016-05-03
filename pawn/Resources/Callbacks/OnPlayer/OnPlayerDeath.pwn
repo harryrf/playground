@@ -162,8 +162,8 @@ public OnPlayerDeath(playerid, killerid, reason) {
         iPlayerSesKills[killerid]++;
 
         // Handle wanted levels.
-        if (!IsPlayerInMinigame(killerid))
-            OnPlayerDeathWantedLevel(playerid, killerid);
+        if (!IsPlayerInMinigame (killerid))
+            WantedLevel__OnPlayerDeath (playerid, killerid);
 
         // Handle bonus time kills.
         BonusTime__CheckPlayer(killerid, 2);
@@ -255,8 +255,8 @@ public OnPlayerDeath(playerid, killerid, reason) {
         if (GetPlayerState(killerid) != PLAYER_STATE_DRIVER || g_VirtualWorld[killerid] != 0 || IsPlayerInMinigame(killerid))
             return 0;
 
-        GetDistanceBetweenPlayers(playerid, killerid);
-        if (PlayerInfo[killerid][PlayerStatus] != STATUS_CHASE && !sKillTime && xDistance < 100.0)
+        new Float:distanceBetweenPlayers = GetDistanceBetweenPlayers(playerid, killerid);
+        if (PlayerInfo[killerid][PlayerStatus] != STATUS_CHASE && !sKillTime && distanceBetweenPlayers < 100.0)
             return OnPlayerLameKill(playerid, killerid);
     }
 

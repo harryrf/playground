@@ -155,9 +155,7 @@ class Account <playerId (MAX_PLAYERS)> {
         Player(playerId)->setIsLoggedIn(true);
         m_verified = true;
 
-        new message[32];
-        format(message, sizeof(message), "%d %s", playerId, Player(playerId)->nicknameString());
-        IRC->broadcast(LoginIrcMessage, message);
+        Announcements->announcePlayerLoggedin(playerId);
 
         Instrumentation->recordActivity(PlayerLoginActivity);
         if (Player(playerId)->isVip())
@@ -166,7 +164,7 @@ class Account <playerId (MAX_PLAYERS)> {
         Annotation::ExpandList<OnPlayerLogin>(playerId);
 
         // Broadcast an OnPlayerLogin callback that can be intercepted by other scripts.
-        CallRemoteFunction("OnPlayerLogin", "ii", playerId, m_userId);
+        CallRemoteFunction("OnPlayerLogin", "iii", playerId, m_userId, AccountData(playerId)->gangId());
 
         sprayTagLoadSprayedTags(playerId);
     }
@@ -177,21 +175,21 @@ class Account <playerId (MAX_PLAYERS)> {
      * guest. Their nickname will be changed, and they'll be treated as any unregistered player.
      */
     public changeNicknameAndPlayAsGuest() {
-        new randomNickname[32];
+        new randomNickname[MAX_PLAYER_NAME+1]
+           ,oldNickname[MAX_PLAYER_NAME+1];
         NicknameGenerator->generateForPlayerId(playerId, randomNickname, sizeof(randomNickname));
 
         // Instrument how many players decide to play as a guest.
         Instrumentation->recordActivity(PlayerLoginAsGuestActivity);
 
+        oldNickname = Player(playerId)->nicknameString();
         Player(playerId)->setNickname(randomNickname);
         Player(playerId)->setIsRegistered(false);
         Player(playerId)->setIsLoggedIn(false);
 
         m_userId = 0;
 
-        new message[32];
-        format(message, sizeof(message), "%d %s", playerId, Player(playerId)->nicknameString());
-        IRC->broadcast(GuestLoginIrcMessage, message);
+        Announcements->announcePlayerGuestPlay(playerId, oldNickname);
 
         Annotation::ExpandList<OnPlayerGuestLogin>(playerId);
     }
@@ -263,5 +261,5 @@ class Account <playerId (MAX_PLAYERS)> {
     }
 };
 
-forward OnPlayerLogin(playerid, userid);
-public OnPlayerLogin(playerid, userid) {}
+forward OnPlayerLogin(playerid, userid, gangId);
+public OnPlayerLogin(playerid, userid, gangId) {}

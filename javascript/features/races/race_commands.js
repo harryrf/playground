@@ -17,6 +17,8 @@ class RaceCommands {
   constructor(commandManager, raceManager) {
     this.raceManager_ = raceManager;
 
+    return;  // The system still has to be disabled.
+
     // Register the /race command, currently limited to administrators because it's experimental.
     commandManager.buildCommand('race')
         // /race [id]
@@ -33,8 +35,6 @@ class RaceCommands {
   // Either starts or joins the race with |id|, depending on whether an instance of the race is
   // currently accepting sign-ups. If not, a new sign-up round will be started.
   raceStart(player, id) {
-    return player.sendMessage(Message.RACE_ERROR_DISABLED);
-      
     if (player.activity != Player.PLAYER_ACTIVITY_NONE)
       return player.sendMessage(Message.RACE_ERROR_ALREADY_ENGAGED);
 
@@ -44,7 +44,7 @@ class RaceCommands {
     // TODO: Withdraw the price of playing a race from the player's account.
 
     // Skip the sign-up phase if the player is the only person in-game.
-    let skipSignup = Player.count() == 1;
+    let skipSignup = server.playerManager.count == 1;
 
     this.raceManager_.startRace(player, id, skipSignup);
   }
@@ -53,8 +53,6 @@ class RaceCommands {
   // best times, and personalized best times if the player has logged in to their account. This
   // command is asynchronous because the personalized times may have to be read from the database.
   raceOverview(player) {
-    return player.sendMessage(Message.RACE_ERROR_DISABLED);
-      
     this.raceManager_.listRacesForPlayer(player).then(races => {
       // Bail out if there are no races, since there won't be anything to display.
       if (!races.length)
@@ -97,7 +95,7 @@ class RaceCommands {
   // TODO: This is a hack because races exist here, while everything else for /leave exists in
   // Pawn. We still need to be able to remove a player from a race though.
   onPlayerCommandText(event) {
-    let player = Player.get(event.playerid);
+    let player = server.playerManager.getById(event.playerid);
     if (!player)
       return;
 

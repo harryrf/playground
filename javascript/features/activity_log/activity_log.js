@@ -15,7 +15,7 @@ class ActivityLog extends Feature {
     super(playground);
 
     this.callbacks_ = new ScopedCallbacks();
-    this.recorder_ = new ActivityRecorder(playground.database);
+    this.recorder_ = new ActivityRecorder(server.database);
     
     // Translates OnPawnEventName to respectively `onPawnEventName` or `pawneventname`.
     const toMethodName = name => name.charAt(0).toLowerCase() + name.slice(1);
@@ -33,18 +33,18 @@ class ActivityLog extends Feature {
   // Called when a confirmed death has happened with the corrected Id of the killer, if any. The
   // |event| contains the { playerid, killerid, reason } about the death.
   onPlayerResolvedDeath(event) {
-    const player = Player.get(event.playerid);
+    const player = server.playerManager.getById(event.playerid);
     if (!player)
       return;
 
-    const userId = player.isRegistered() ? player.account.userId : null;
+    const userId = player.isRegistered() ? player.userId : null;
     const position = player.position;
 
-    const killer = Player.get(event.killerid);
+    const killer = server.playerManager.getById(event.killerid);
     if (!killer)
       this.recorder_.writeDeath(userId, position, event.reason);
     else
-      this.recorder_.writeKill(userId, killer.isRegistered() ? killer.account.userId : null, position, event.reason);
+      this.recorder_.writeKill(userId, killer.isRegistered() ? killer.userId : null, position, event.reason);
   }
 
   // Called when a player has fired from a weapon. Only |event|s that hit a player or a vehicle will
@@ -54,18 +54,18 @@ class ActivityLog extends Feature {
         event.hittype != 2 /* BULLET_HIT_TYPE_VEHICLE */)
       return;
 
-    const player = Player.get(event.playerid);
+    const player = server.playerManager.getById(event.playerid);
     if (!player)
       return;
 
-    const userId = player.isRegistered() ? player.account.userId : null;
+    const userId = player.isRegistered() ? player.userId : null;
     const position = player.position;
 
     let targetUserId = null;
     if (event.hittype == 1 /* BULLET_HIT_TYPE_PLAYER */) {
-      const targetPlayer = Player.get(event.hitid);
+      const targetPlayer = server.playerManager.getById(event.hitid);
       if (targetPlayer && targetPlayer.isRegistered())
-        targetUserId = targetPlayer.account.userId;
+        targetUserId = targetPlayer.userId;
     }
 
     // TODO(Russell): It would be great if we could consider the driver of the vehicle that's being

@@ -10,7 +10,7 @@ enum IrcMessageType {
     DeveloperIrcMessage, // [message]
     BuyPropertyIrcMessage, // [propertyPrice] [playerName] [propertyName]
     GangChatIrcMessage, // [playerId] [playerName] ![message]
-    GuestLoginIrcMessage, // [playerId] [playerName]
+    GuestLoginIrcMessage, // [playerId] [oldPlayerName] [newPlayerName]
     LoginIrcMessage, // [playerId] [playerName]
     SellPropertyIrcMessage, // [propertyPrice] [playerName] [propertyName]
     SellAllPropertiesIrcMessage, // [playerId] [playerName] [earnings]
@@ -69,5 +69,6 @@ enum Casino {
  */
 enum ColorPickerResultTarget {
     GangColor,
-    PlayerColor
+    PlayerColor,
+    JavaScriptColor
 };

@@ -179,6 +179,8 @@ class PlayerSpectateHandler {
             return 1;
         }
 
+        SendClientMessage(playerId, Color::Information, "Use L-Shift to cycle upward and Spacebar to cycle downward through players.");
+
         this->startSpectating(playerId, subjectId);
 
         return 1;
@@ -361,5 +363,54 @@ class PlayerSpectateHandler {
      */
     public bool: isSpectating(playerId) {
         return m_isSpectating[playerId];
+    }
+
+    /**
+     * A state change of the player's key requires us to detect if the player wants to go to the
+     * previous or next player to watch. This is done by checking the left and right arrow keys.
+     *
+     * @param playerId Id of the player changing their keys.
+     * @param newKeys The new key(s).
+     * @param oldKeys The old key(s).
+     **/
+    @list(OnPlayerKeyStateChange)
+    public OnPlayerKeyStateChange(playerId, newkeys, oldkeys) {
+        if (m_isSpectating[playerId]) {
+            if (PRESSED(KEY_JUMP)) {
+                for (new playerIdToWatch = m_watchingPlayerId[playerId]; playerIdToWatch >= 0;) {
+                    if (playerIdToWatch == 0)
+                        playerIdToWatch = PlayerManager->highestPlayerId();
+                    else
+                        playerIdToWatch--;
+
+                    if (Player(playerIdToWatch)->isConnected() == false)
+                        continue;
+
+                    if (playerId == playerIdToWatch || m_isSpectating[playerIdToWatch] == true)
+                        continue;
+
+                    this->startSpectating(playerId, playerIdToWatch);
+                    break;
+                }
+            }
+
+            if (PRESSED(KEY_SPRINT)) {
+                for (new playerIdToWatch = m_watchingPlayerId[playerId]; playerIdToWatch <= PlayerManager->highestPlayerId();) {
+                    if (playerIdToWatch == PlayerManager->highestPlayerId())
+                        playerIdToWatch = 0;
+                    else
+                        playerIdToWatch++;
+
+                    if (Player(playerIdToWatch)->isConnected() == false)
+                        continue;
+
+                    if (playerId == playerIdToWatch || m_isSpectating[playerIdToWatch] == true)
+                        continue;
+
+                    this->startSpectating(playerId, playerIdToWatch);
+                    break;
+                }
+            }
+        }
     }
 };

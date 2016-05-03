@@ -5,77 +5,43 @@
 const Extendable = require('base/extendable.js'),
       Vector = require('base/vector.js');
 
-// Identifier, stored as an IP address, that can be used to detect players created for testing.
-const TEST_PLAYER_IDENTIFIER = '0.0.0.0';
-
-// See https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Symbol
-let playerCreateSymbol = Symbol('Private symbol to limit creation of Player instances.'),
-    players = {};
-
 class Player extends Extendable {
-  // Returns the Player instance for the player with id |playerId|. If the player is not connected
-  // to Las Venturas Playground, NULL will be returned instead.
-  static get(playerId) {
-    if (typeof playerId != 'number')
-      throw new Error('Player.get() takes a number argument, ' + typeof playerid + ' given.');
-
-    if (!players.hasOwnProperty(playerId))
-      return null;
-
-    return players[playerId];
-  }
-
-  // Finds a player either by name or by id, as contained in |identifier|. Player ids will be given
-  // precedent when in doubt, for example when a player named "110" is online.
-  static find(identifier) {
-    let parsedPlayerId = parseFloat(identifier);
-    if (!Number.isNaN(parsedPlayerId) && Number.isFinite(parsedPlayerId) && players.hasOwnProperty(parsedPlayerId))
-      return players[parsedPlayerId];
-
-    for (let playerId of Object.keys(players)) {
-      // TODO: Do case-insensitive matching?
-      if (players[playerId].name == identifier)
-        return players[playerId];
-    }
-
-    return null;
-  }
-
-  // Returns the number of players that are currently online on Las Venturas Playground.
-  static count() {
-    return Object.keys(players).length;
-  }
-
-  // Executes |fn| for each player online on the server.
-  static forEach(fn) {
-    Object.keys(players).forEach(playerId => fn(players[playerId]));
-  }
-
-  // Creates a new instance of the Player class for |playerId|. This method must only be used by
-  // code in this file, hence the |privateSymbol| which is deliberately not exported.
-  constructor(privateSymbol, playerId) {
+  // Creates a new instance of the Player class for |playerId|.
+  constructor(playerId) {
     super();
 
-    if (privateSymbol != playerCreateSymbol)
-      throw new Error('Please do not instantiate the Player class. Use Player.get(playerId) instead.');
-
     this.id_ = playerId;
-    this.connected_ = true;
     this.name_ = pawnInvoke('GetPlayerName', 'iS', playerId);
     this.ipAddress_ = pawnInvoke('GetPlayerIp', 'iS', playerId);
+
+    this.connected_ = true;
+    this.disconnecting_ = false;
+
     this.level_ = Player.LEVEL_PLAYER;
+    this.userId_ = null;
+
     this.activity_ = Player.PLAYER_ACTIVITY_NONE;
+    this.messageLevel_ = 0;
   }
 
   // Returns the id of this player. This attribute is read-only.
   get id() { return this.id_; }
 
   // Returns whether the player is still connected to the server.
-  get connected() { return this.connected_; }
+  isConnected() { return this.connected_; }
+
+  // Returns whether the player is currently in process of disconnecting.
+  isDisconnecting() { return this.disconnecting_; }
+
+  // Marks the player as being in process of disconnecting from the server.
+  notifyDisconnecting() {
+    this.disconnecting_ = true;
+  }
 
   // Marks the player as having disconnected from the server.
-  markAsDisconnected() {
+  notifyDisconnected() {
     this.connected_ = false;
+    this.disconnecting_ = false;
   }
 
   // Returns or updates the name of this player. Changing the player's name is currently not
@@ -86,8 +52,14 @@ class Player extends Extendable {
   // Returns the IP address of this player. This attribute is read-only.
   get ipAddress() { return this.ipAddress_; }
 
-  // Returns the level of this player. Synchronized with the gamemode using the `levelchange` event.
+  // Gets the level of this player. Synchronized with the gamemode using the `levelchange` event.
   get level() { return this.level_; }
+
+  // Returns whether the player is registered and logged in to their account.
+  isRegistered() { return this.userId_ !== null; }
+
+  // Gets the user Id of the player's account if they have identified to it.
+  get userId() { return this.userId_; }
 
   // Gets or sets the virtual world the player is part of.
   get virtualWorld() { return pawnInvoke('GetPlayerVirtualWorld', 'i', this.id_); }
@@ -144,6 +116,11 @@ class Player extends Extendable {
       throw new Error('Unknown vehicle to put the player in: ' + vehicle);
   }
 
+  // Plays |soundId| for the player at their current position.
+  playSound(soundId) {
+    pawnInvoke('PlayerPlaySound', 'iifff', this.id_, soundId, 0, 0, 0);
+  }
+
   // Returns or updates the activity of this player. Updating the activity will be propagated to
   // the Pawn part of the gamemode as well.
   get activity() { return this.activity_; }
@@ -154,14 +131,26 @@ class Player extends Extendable {
     pawnInvoke('OnPlayerActivityChange', 'ii', this.id_, activity);
   }
 
+  // Gets the message level at which this player would like to receive messages. Only applicable
+  // to administrators on the server.
+  get messageLevel() { return this.messageLevel_; }
+
+  // Displays the dialog for |caption| explained by |message| to the player.
+  showDialog(dialogId, style, caption, message, leftButton, rightButton) {
+    pawnInvoke('ShowPlayerDialog', 'iiissss', this.id_, dialogId, style, caption, message,
+               leftButton, rightButton);
+  }
+
   // Sends |message| to the player. The |message| can either be a scalar JavaScript value or an
   // instance of the Message class that exists in //base if you wish to use colors.
-  sendMessage(message) {
+  sendMessage(message, ...args) {
     // TODO: Automatically split up messages that are >144 characters.
     // TODO: Verify that any formatting used in |message| is valid.
-    // TODO: Support instances of the Message class when it exists.
 
-    pawnInvoke('SendClientMessage', 'iis', this.id_, 0x000000FF, message.toString());
+    if (message instanceof Message)
+      message = Message.format(message, ...args);
+
+    pawnInvoke('SendClientMessage', 'iis', this.id_, 0xFFFFFFFF, message.toString());
   }
 
   // -----------------------------------------------------------------------------------------------
@@ -173,36 +162,6 @@ class Player extends Extendable {
                virtualWorld, interiorId, type);
   }
 
-  // -----------------------------------------------------------------------------------------------
-  // The following methods are only meant for testing!
-
-  // Simulates connecting of a player optionally identified by id |name| for the purposes of tests.
-  // Make sure to also call |destroyForTest| after the test is complete to remove the player again.
-  static createForTest(playerId, nickname) {
-    playerId = playerId || 0;
-
-    if (players.hasOwnProperty(playerId))
-      throw new Error('Unable to create a player for testing purposes, id ' + playerId + ' already taken.');
-
-    players[playerId] = new Player(playerCreateSymbol, playerId);
-    players[playerId].name_ = nickname || 'TestPlayer';
-    players[playerId].ipAddress_ = TEST_PLAYER_IDENTIFIER;
-
-    return players[playerId];
-  }
-
-  // Destroys the player instance of |playerId| for the purposes of testing. The associated player
-  // must have been created by a test as well, otherwise an exception will be thrown.
-  static destroyForTest(player) {
-    if (!players.hasOwnProperty(player.id))
-      throw new Error('No player with this id has connected to the server.');
-
-    if (player.ipAddress != TEST_PLAYER_IDENTIFIER)
-      throw new Error('The player with this id was not created by a test.');
-
-    players[player.id].markAsDisconnected();
-    delete players[player.id];
-  }
 };
 
 // Invalid player id. Must be equal to SA-MP's INVALID_PLAYER_ID definition.
@@ -228,48 +187,22 @@ Player.STATE_SPECTATING = 9;
 // Loads the activities of a player and installs them on |Player|.
 require('entities/player_activities.js')(Player);
 
-// Called when a player connects to Las Venturas Playground. Registers the player as being in-game
-// and initializes the Player instance for them.
-self.addEventListener('playerconnect', event =>
-    players[event.playerid] = new Player(playerCreateSymbol, event.playerid));
-
-// Called when the level of a player changes. This event is custom to Las Venturas Playground.
-self.addEventListener('playerlevelchange', event => {
-  if (!players.hasOwnProperty(event.playerid))
-    return;
-
-  switch(event.newlevel) {
-    case 2:  // AdministratorLevel
-      players[event.playerid].level_ = Player.LEVEL_ADMINISTRATOR;
-      break;
-    case 3:  // ManagementLevel
-      players[event.playerid].level_ = Player.LEVEL_MANAGEMENT;
-      break;
-    default:
-      players[event.playerid].level_ = Player.LEVEL_PLAYER;
-      break;
-  }
-});
-
 // Called when a player's activity changes. This event is custom to Las Venturas Playground.
 self.addEventListener('playeractivitychange', event => {
-  if (!players.hasOwnProperty(event.playerid))
+  const player = server.playerManager.getById(event.playerid);
+  if (!player)
     return;
 
-  player[event.playerid].activity_ = event.activity;
+  player.activity_ = event.activity;
 });
 
-// Called when a player disconnects from the server. Removes the player from our registry. The
-// removal will be done at the end of the event loop, to make sure that the other playerdisconnect
-// listeners will still be able to retrieve the Player object.
-self.addEventListener('playerdisconnect', event => {
-  wait(0).then(() => {
-    if (!players.hasOwnProperty(event.playerid))
-      return;
+// Called when a player's message level changes. This event is custom to Las Venturas Playground.
+self.addEventListener('messagelevelchange', event => {
+  const player = server.playerManager.getById(event.playerid);
+  if (!player)
+    return;
 
-    players[event.playerid].markAsDisconnected();
-    delete players[event.playerid];
-  });
+  player.messageLevel_ = event.messagelevel;
 });
 
 // Utility function: convert a player's level to a string.
@@ -288,5 +221,3 @@ global.playerLevelToString = (level, plural = false) => {
 
 // Expose the Player object globally since it will be commonly used.
 global.Player = Player;
-
-exports = Player;
